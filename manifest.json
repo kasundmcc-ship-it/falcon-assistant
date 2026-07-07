@@ -2,7 +2,7 @@
   "name": "Falcon Unlimited — Assistant",
   "short_name": "Falcon Assistant",
   "description": "Log daily bus income, repairs, Falcon special trips and cashbook entries for Falcon Unlimited.",
-  "start_url": "./assistant_app.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
