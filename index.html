@@ -538,19 +538,19 @@ function calcQuick(){
   const pool = initialProfit + driverShare + assistantShare;
 
   let driver, assistant, owner, driverLabel, asstLabel, note;
-  if(pool < 10001){
+  if(pool < 10000){
     const equalSplit = pool >= 0 ? pool / 3 : 0;
     driver = equalSplit; assistant = equalSplit; owner = equalSplit;
     driverLabel = 'Driver Payout (equal share)';
     asstLabel = 'Assistant Payout (equal share)';
     note = pool >= 0
-      ? `Pool of ${fmt(pool)} is Rs. 10,000 or under — split equally three ways between Owner, Driver and Assistant.`
+      ? `Pool of ${fmt(pool)} is under Rs. 10,000 — split equally three ways between Owner, Driver and Assistant.`
       : `Pool of ${fmt(pool)} is negative (a loss day) — all payouts are set to Rs. 0.`;
   } else {
     driver = driverShare; assistant = assistantShare; owner = initialProfit;
     driverLabel = 'Driver Payout (15%)';
     asstLabel = 'Assistant Payout (15%)';
-    note = `Pool of ${fmt(pool)} is over Rs. 10,000 — normal 15% / 15% rates apply.`;
+    note = `Pool of ${fmt(pool)} is Rs. 10,000 or over — normal 15% / 15% rates apply.`;
   }
 
   document.getElementById('calc_income').textContent = fmt(income);
