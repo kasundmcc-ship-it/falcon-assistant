@@ -362,7 +362,7 @@
       <div class="calc-row"><span>Total Deductions (Diesel + Expenses)</span><b id="calc_deductions">Rs. 0.00</b></div>
       <div class="calc-row"><span id="calc_driver_label">Driver Payout (15%)</span><b id="calc_driver">Rs. 0.00</b></div>
       <div class="calc-row"><span id="calc_asst_label">Assistant Payout (15%)</span><b id="calc_assistant">Rs. 0.00</b></div>
-      <div class="calc-note" id="calc_split_note">Pool of Rs. 0 is Rs. 10,000 or over — normal 15% / 15% rates apply.</div>
+      <div class="calc-note" id="calc_split_note">Pool of Rs. 0 is over Rs. 10,000 — normal 15% / 15% rates apply.</div>
       <div class="net-preview" style="margin-top:14px;">
         <div class="lbl">Owner's Net Profit</div>
         <div class="val" id="calc_balance">Rs. 0.00</div>
@@ -535,20 +535,20 @@ function calcQuick(){
   // Step 3: initial profit after both shares + diesel + other expenses
   const initialProfit = income - driverShare - assistantShare - deductions;
   // Step 4: minimum-threshold pool check = income - deductions (i.e. profit + both shares)
-  const pool = initialProfit + driverShare + assistantShare;
+  const pool = Math.round((initialProfit + driverShare + assistantShare) * 100) / 100;
 
   let driver, assistant, owner, driverLabel, asstLabel, note;
-  if(pool < 10000){
+  if(pool < 10001){
     const each = pool / 3;
     driver = each; assistant = each; owner = each;
     driverLabel = 'Driver Payout (equal share)';
     asstLabel = 'Assistant Payout (equal share)';
-    note = `Pool of ${fmt(pool)} is under Rs. 10,000 — split equally three ways between Owner, Driver and Assistant.`;
+    note = `Pool of ${fmt(pool)} is Rs. 10,000 or under — split equally three ways between Owner, Driver and Assistant.`;
   } else {
     driver = driverShare; assistant = assistantShare; owner = initialProfit;
     driverLabel = 'Driver Payout (15%)';
     asstLabel = 'Assistant Payout (15%)';
-    note = `Pool of ${fmt(pool)} is Rs. 10,000 or over — normal 15% / 15% rates apply.`;
+    note = `Pool of ${fmt(pool)} is over Rs. 10,000 — normal 15% / 15% rates apply.`;
   }
 
   document.getElementById('calc_income').textContent = fmt(income);
