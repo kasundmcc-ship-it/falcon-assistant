@@ -146,6 +146,9 @@
   .calc-row span{color:var(--text-muted);}
   .calc-row b{font-family:'Fraunces',serif;font-size:16px;color:var(--text);}
   .calc-note{font-size:11.5px;color:var(--text-muted);margin-top:8px;line-height:1.5;}
+  .calc-badge{display:block;text-align:center;padding:9px 12px;border-radius:20px;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-bottom:14px;line-height:1.4;}
+  .calc-badge.standard{background:rgba(34,199,122,0.16);color:var(--emerald);}
+  .calc-badge.split{background:rgba(240,183,74,0.18);color:var(--amber);}
   .calc-share-footer{margin-top:16px;padding-top:12px;border-top:1px solid var(--line);text-align:center;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--gold-soft);font-weight:700;}
 
   @media print{
@@ -358,14 +361,16 @@
 
     <div class="card" id="calc_share_card">
       <h3>📊 Payout Breakdown</h3>
-      <div class="calc-row"><span>Total Income</span><b id="calc_income">Rs. 0.00</b></div>
-      <div class="calc-row"><span>Total Deductions (Diesel + Expenses)</span><b id="calc_deductions">Rs. 0.00</b></div>
-      <div class="calc-row"><span id="calc_driver_label">Driver Payout (15%)</span><b id="calc_driver">Rs. 0.00</b></div>
-      <div class="calc-row"><span id="calc_asst_label">Assistant Payout (15%)</span><b id="calc_assistant">Rs. 0.00</b></div>
-      <div class="calc-note" id="calc_split_note">Pool of Rs. 0 is over Rs. 10,000 — normal 15% / 15% rates apply.</div>
+      <div class="calc-badge" id="calc_badge">✅ Standard 15% Payout Applied</div>
+      <div class="calc-row"><span>Total Daily Income</span><b id="calc_income">LKR 0.00</b></div>
+      <div class="calc-row"><span>Diesel Cost</span><b id="calc_diesel_disp">LKR 0.00</b></div>
+      <div class="calc-row"><span>Other Expenses</span><b id="calc_other_disp">LKR 0.00</b></div>
+      <div class="calc-row"><span>Total Expenses</span><b id="calc_deductions" style="color:var(--danger);">- LKR 0.00</b></div>
+      <div class="calc-row"><span id="calc_driver_label">Driver Payout</span><b id="calc_driver">LKR 0.00</b></div>
+      <div class="calc-row"><span id="calc_asst_label">Assistant Payout</span><b id="calc_assistant">LKR 0.00</b></div>
       <div class="net-preview" style="margin-top:14px;">
         <div class="lbl">Owner's Net Profit</div>
-        <div class="val" id="calc_balance">Rs. 0.00</div>
+        <div class="val" id="calc_balance">LKR 0.00</div>
       </div>
       <div class="calc-share-footer" id="calc_share_footer">Falcon Unlimited · <span id="calc_share_date"></span></div>
     </div>
@@ -523,47 +528,57 @@ function updateTripNet(){
 
 /* ============== DAILY PROFIT CALCULATOR ============== */
 let LAST_CALC = null;
+function fmtLKR(val){
+  val = Number(val)||0;
+  return 'LKR ' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 function calcQuick(){
   const income = Number(document.getElementById('calc_total').value)||0;
-  const fuel = Number(document.getElementById('calc_fuel').value)||0;
+  const diesel = Number(document.getElementById('calc_fuel').value)||0;
   const expenses = Number(document.getElementById('calc_expenses').value)||0;
-  const deductions = fuel + expenses;
+  const totalExpenses = diesel + expenses;
 
-  // Step 1 & 2: initial 15% shares of TOTAL INCOME
+  // Step 1 & 2: standard 15% shares of Total Daily Income
   const driverShare = income * 0.15;
   const assistantShare = income * 0.15;
-  // Step 3: initial profit after both shares + diesel + other expenses
-  const initialProfit = income - driverShare - assistantShare - deductions;
-  // Step 4: minimum-threshold pool check = income - deductions (i.e. profit + both shares)
-  const pool = initialProfit + driverShare + assistantShare;
+  // Step 3: Owner Initial Profit
+  const ownerInitialProfit = income - driverShare - assistantShare - diesel - expenses;
 
-  let driver, assistant, owner, driverLabel, asstLabel, note;
-  if(pool < 10000){
-    const equalSplit = pool >= 0 ? pool / 3 : 0;
+  let driver, assistant, owner, badgeText, badgeClass, driverLabel, asstLabel;
+
+  // Step 4: Business Rule — if Owner's initial profit is below the Driver's standard 15% share,
+  // switch to a 3-way equal split of what's left after diesel & other expenses.
+  if(ownerInitialProfit < driverShare){
+    const remainingBalance = income - diesel - expenses;
+    const equalSplit = remainingBalance >= 0 ? remainingBalance / 3 : 0;
     driver = equalSplit; assistant = equalSplit; owner = equalSplit;
     driverLabel = 'Driver Payout (equal share)';
     asstLabel = 'Assistant Payout (equal share)';
-    note = pool >= 0
-      ? `Pool of ${fmt(pool)} is under Rs. 10,000 — split equally three ways between Owner, Driver and Assistant.`
-      : `Pool of ${fmt(pool)} is negative (a loss day) — all payouts are set to Rs. 0.`;
+    badgeText = '⚠️ 3-Way Equal Split Applied (Owner Profit Below Driver 15%)';
+    badgeClass = 'split';
   } else {
-    driver = driverShare; assistant = assistantShare; owner = initialProfit;
+    driver = driverShare; assistant = assistantShare; owner = ownerInitialProfit;
     driverLabel = 'Driver Payout (15%)';
     asstLabel = 'Assistant Payout (15%)';
-    note = `Pool of ${fmt(pool)} is Rs. 10,000 or over — normal 15% / 15% rates apply.`;
+    badgeText = '✅ Standard 15% Payout Applied';
+    badgeClass = 'standard';
   }
 
-  document.getElementById('calc_income').textContent = fmt(income);
-  document.getElementById('calc_deductions').textContent = fmt(deductions);
-  document.getElementById('calc_driver').textContent = fmt(driver);
-  document.getElementById('calc_assistant').textContent = fmt(assistant);
-  document.getElementById('calc_balance').textContent = fmt(owner);
+  document.getElementById('calc_income').textContent = fmtLKR(income);
+  document.getElementById('calc_diesel_disp').textContent = fmtLKR(diesel);
+  document.getElementById('calc_other_disp').textContent = fmtLKR(expenses);
+  document.getElementById('calc_deductions').textContent = '- ' + fmtLKR(totalExpenses);
+  document.getElementById('calc_driver').textContent = fmtLKR(driver);
+  document.getElementById('calc_assistant').textContent = fmtLKR(assistant);
+  document.getElementById('calc_balance').textContent = fmtLKR(owner);
   document.getElementById('calc_driver_label').textContent = driverLabel;
   document.getElementById('calc_asst_label').textContent = asstLabel;
-  document.getElementById('calc_split_note').textContent = note;
+  const badgeEl = document.getElementById('calc_badge');
+  badgeEl.textContent = badgeText;
+  badgeEl.className = 'calc-badge ' + badgeClass;
   document.getElementById('calc_share_date').textContent = new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
 
-  LAST_CALC = { bus: document.getElementById('calc_bus').value, income, fuel, expenses, deductions, driver, assistant, owner };
+  LAST_CALC = { bus: document.getElementById('calc_bus').value, income, diesel, expenses, totalExpenses, driver, assistant, owner, badgeText };
 }
 function resetCalc(){
   ['calc_total','calc_fuel','calc_expenses'].forEach(id=>document.getElementById(id).value='');
@@ -573,7 +588,7 @@ function useCalcInIncome(){
   if(!LAST_CALC || !LAST_CALC.income){ showToast('Enter figures in the calculator first', true); return; }
   document.getElementById('inc_bus').value = LAST_CALC.bus;
   document.getElementById('inc_income').value = LAST_CALC.income;
-  document.getElementById('inc_diesel').value = LAST_CALC.fuel;
+  document.getElementById('inc_diesel').value = LAST_CALC.diesel;
   document.getElementById('inc_other').value = LAST_CALC.expenses;
   document.getElementById('inc_driver').value = LAST_CALC.driver.toFixed(2);
   document.getElementById('inc_asst').value = LAST_CALC.assistant.toFixed(2);
@@ -587,12 +602,14 @@ function buildCalcShareText(){
   const c = LAST_CALC;
   const date = new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
   return `*Falcon Unlimited — Daily Calculation*\n`
-    + `Bus: ${c.bus}\nDate: ${date}\n\n`
-    + `Total Income: ${fmt(c.income)}\n`
-    + `Total Deductions: ${fmt(c.deductions)}\n`
-    + `Driver Payout: ${fmt(c.driver)}\n`
-    + `Assistant Payout: ${fmt(c.assistant)}\n`
-    + `Owner's Net Profit: ${fmt(c.owner)}`;
+    + `Bus: ${c.bus}\nDate: ${date}\n${c.badgeText}\n\n`
+    + `Total Daily Income: ${fmtLKR(c.income)}\n`
+    + `Diesel Cost: ${fmtLKR(c.diesel)}\n`
+    + `Other Expenses: ${fmtLKR(c.expenses)}\n`
+    + `Total Expenses: - ${fmtLKR(c.totalExpenses)}\n`
+    + `Driver Payout: ${fmtLKR(c.driver)}\n`
+    + `Assistant Payout: ${fmtLKR(c.assistant)}\n`
+    + `Owner's Net Profit: ${fmtLKR(c.owner)}`;
 }
 
 async function captureCalcCanvas(){
